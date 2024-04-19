@@ -18,10 +18,7 @@ void main()
 {
   v_vertexColors = vertexColors;
 
-  vec3 direction = position - centralDotPosition;
-  vec3 offset = direction * particleSize;
-
-  vec4 newPosition =  MP * vec4(offset,1.0f);
+  vec4 newPosition =  MP * vec4(position,1.0f);
 	gl_Position = vec4(newPosition.x, newPosition.y, newPosition.z, newPosition.w);
 }
 

@@ -41,9 +41,9 @@ bool simulation_running = false;
 int NUM_PARTICLES = 50;
 
 // Define the Velocity of particles
-float velocity = 0.9f;
+float velocity = 0.5f;
 
-float particleSizeValue = 0.09f;  // Change this value to adjust particle size
+float particleSizeValue = 5.0f;  // Change this value to adjust particle size
 
 glm::vec3 centralDotPosition = glm::vec3(0.0f);
 
@@ -59,6 +59,9 @@ struct Particle
     glm::vec3 position;
     glm::vec3 color;
     int shape;
+    float lifespan;
+    glm::vec3 velocity;
+    glm::vec3 acceleration;
 };
 
 
@@ -290,10 +293,20 @@ void VertexSpecification(){
     // Append cursorVertexData to vertexData
     vertexData.push_back(centralDotPosition.x); // Center
     vertexData.push_back(centralDotPosition.y); // Top
-    vertexData.push_back(0.9);
+    vertexData.push_back(-0.9);
     vertexData.push_back(1.0f); // Red
     vertexData.push_back(0.0f); // Green
     vertexData.push_back(0.0f); // Blue
+
+    Particle p;
+    p.position =  glm::vec3(centralDotPosition.x, centralDotPosition.y, -0.9);
+    p.lifespan = 1.0f;
+    p.velocity = glm::vec3(0.0f,0.0f,0.0f);
+    p.color = glm::vec3(1.0f, 0.0f, 0.0f);
+    p.acceleration = glm::vec3(0.0f, 0.0f, 0.0f);
+    p.shape = 0;
+
+    particles.push_back(p);
 
     // Initialize particles and vertexData
     for (int i = 0; i < NUM_PARTICLES; ++i)
@@ -307,13 +320,14 @@ void VertexSpecification(){
                                      (rand() % 255) / 255.0f);
         int shape = rand() % 3;
 
-        float offsetX = (rand() % 50) / 100.0f - 0.25f;  // Random offset in x-axis
-        float offsetY = (rand() % 50) / 100.0f - 0.25f;  // Random offset in y-axis
-
         Particle p;
-        p.position =  position + glm::vec3(offsetX, offsetY, 0.0f);
+        p.position =  position;
+        p.lifespan = 1.0f;
+        p.velocity = glm::vec3((rand() % 200 - 100) / 100.0f, (rand() % 200 - 100) / 100.0f, 0.0f);
         p.color = color;
+        p.acceleration = glm::vec3(0.0f, -0.5f, 0.0f);
         p.shape = shape;
+
         particles.push_back(p);
 
         vertexData.push_back(position.x);
@@ -432,13 +446,13 @@ void PreDraw(){
         exit(EXIT_FAILURE);
     }
 
-     // Update centralDotPosition uniform
-    GLint centralDotPosID = glGetUniformLocation(gGraphicsPipelineShaderProgram, "centralDotPosition");
-    if(centralDotPosID >= 0){
-        glUniform3fv(centralDotPosID, 1, &centralDotPosition[0]);
-    }else{
-        std::cout << "Could not find centralDotPosition uniform\n";
-    }
+    //  // Update centralDotPosition uniform
+    // GLint centralDotPosID = glGetUniformLocation(gGraphicsPipelineShaderProgram, "centralDotPosition");
+    // if(centralDotPosID >= 0){
+    //     glUniform3fv(centralDotPosID, 1, &centralDotPosition[0]);
+    // }else{
+    //     std::cout << "Could not find centralDotPosition uniform\n";
+    // }
 
     GLint particleSizeLocation = glGetUniformLocation(gGraphicsPipelineShaderProgram, "particleSize");
     glUniform1f(particleSizeLocation, particleSizeValue);
@@ -460,32 +474,36 @@ void Draw(){
 	// Select the vertex buffer object we want to enable
     glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
 
-    //Draw 
+    //Draw the Cursor
     glPointSize(10.0f);
     glDrawArrays(GL_POINTS, 0, 1);
 
+
+    //Render it all as points
+    glPointSize(particleSizeValue);
+    glDrawArrays(GL_POINTS, 1, particles.size()-1);
+
     //Render data
-
     //TODO: Make Hexagon and Rhombus Work
-    for (int i = 1; i < NUM_PARTICLES + 1; ++i) {
-        switch (particles[i].shape)
-        {
-        case 0:  // Triangle
-            glDrawArrays(GL_TRIANGLES, i * 3, 3);  // Assuming each particle has 3 vertices for triangle
-            break;
+    // for (int i = 1; i < NUM_PARTICLES + 1; ++i) {
+    //     switch (particles[i].shape)
+    //     {
+    //     case 0:  // Triangle
+    //         glDrawArrays(GL_TRIANGLES, i * 3, 3);  // Assuming each particle has 3 vertices for triangle
+    //         break;
         
-        case 1:  // Rhombus
-            glDrawArrays(GL_TRIANGLE_FAN, NUM_PARTICLES * 3 + i * 4, 4);  // Assuming each particle has 4 vertices for rhombus
-            break;
+    //     case 1:  // Rhombus
+    //         glDrawArrays(GL_TRIANGLE_FAN, NUM_PARTICLES * 3 + i * 4, 4);  // Assuming each particle has 4 vertices for rhombus
+    //         break;
 
-        case 2:  // Hexagon
-            glDrawArrays(GL_TRIANGLE_FAN, NUM_PARTICLES * 3 + NUM_PARTICLES * 4 + i * 6, 6);  // Assuming each particle has 6 vertices for hexagon
-            break;
+    //     case 2:  // Hexagon
+    //         glDrawArrays(GL_TRIANGLE_FAN, NUM_PARTICLES * 3 + NUM_PARTICLES * 4 + i * 6, 6);  // Assuming each particle has 6 vertices for hexagon
+    //         break;
         
-        default:
-            break;
-        }
-    }
+    //     default:
+    //         break;
+    //     }
+    // }
 
 
 
@@ -545,7 +563,7 @@ void Input() {
             //     particles[i].color.r -= 0.1f;
             //     particles[i].color.r = glm::clamp(particles[i].color.r, 0.0f, 1.0f);
             // }
-            centralDotPosition.y -= velocity; // Move up
+            centralDotPosition.y += velocity; // Move up
         }
         if (state[SDL_SCANCODE_DOWN]) {
             // Change particle color based on down arrow key
@@ -553,7 +571,7 @@ void Input() {
             //     particles[i].color.r -= 0.1f;
             //     particles[i].color.r = glm::clamp(particles[i].color.r, 0.0f, 1.0f);
             // }
-            centralDotPosition.y += velocity; // Move down
+            centralDotPosition.y -= velocity; // Move down
         }
         if (state[SDL_SCANCODE_LEFT]) {
             // Change particle color based on left arrow key
@@ -561,7 +579,7 @@ void Input() {
             //     particles[i].color.g -= 0.1f;
             //     particles[i].color.g = glm::clamp(particles[i].color.g, 0.0f, 1.0f);
             // }
-            centralDotPosition.x += velocity; // Move left
+            centralDotPosition.x -= velocity; // Move left
         }
         if (state[SDL_SCANCODE_RIGHT]) {
             // Change particle color based on right arrow key
@@ -569,7 +587,7 @@ void Input() {
             //     particles[i].color.g += 0.1f;
             //     particles[i].color.g = glm::clamp(particles[i].color.g, 0.0f, 1.0f);
             // }
-            centralDotPosition.x -= velocity; // Move right
+            centralDotPosition.x += velocity; // Move right
         }
         
 
@@ -579,15 +597,70 @@ void Input() {
 
 }
 
+void updateParticles(float deltaTime) {
+
+//Update Curosr
+vertexData[0] = centralDotPosition.x; // Update central dot x position
+vertexData[1] = centralDotPosition.y; // Update central dot y position
+vertexData[2] = -0.9f;                // Update central dot z position
+
+// Update particle movement
+for (int i = 1; i <= particles.size(); i++) {
+    Particle &p = particles[i];
+
+    // Update velocity
+    p.velocity += p.acceleration * deltaTime;
+
+    // Update position
+    p.position += p.velocity * deltaTime;
+}
+
+// Update vertex data
+for (int i = 1; i <= particles.size(); i++) {
+    Particle &p = particles[i];
+    int index = 6 * (i);
+
+    vertexData[index] = p.position.x;
+    vertexData[index + 1] = p.position.y;
+    vertexData[index + 2] = p.position.z;
+
+    // Assuming you have color data in your Particle struct
+    vertexData[index + 3] = p.color.r;
+    vertexData[index + 4] = p.color.g;
+    vertexData[index + 5] = p.color.b;
+}
+
+// Upload updated vertex data to GPU
+//IDK if this should really be done here
+glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(GLfloat), vertexData.data(), GL_DYNAMIC_DRAW);
+}
+
 
 void MainLoop(){
+    // Variables to keep track of time
+    Uint64 currentTime = SDL_GetPerformanceCounter();
+    Uint64 lastTime = 0;
+    float deltaTime = 0.0f;
 
 	// While application is running
 	while(!gQuit){
+
+
+        // Calculate deltaTime
+        lastTime = currentTime;
+        currentTime = SDL_GetPerformanceCounter();
+
+        deltaTime = (float)((currentTime - lastTime) * 1000 / (float)SDL_GetPerformanceFrequency()); // deltaTime in milliseconds
+
+        // Convert deltaTime to seconds (optional)
+        deltaTime /= 1000.0f;
+
 		// Handle Input
 		Input();
 		// Setup anything (i.e. OpenGL State) that needs to take
 		// place before draw calls
+
+        updateParticles(deltaTime);
 
 		PreDraw();
 		// Draw Calls in OpenGL
@@ -657,132 +730,3 @@ int main( int argc, char* args[] ){
 }
 
 
-
-
-//What it was before
-
-/*
-
-int main(int argc, char** argv) {
-    // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
-        return -1;
-    }
-
-    // Create an SDL window
-    SDL_Window* window = SDL_CreateWindow("Particles Simulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
-    if (!window) {
-        std::cerr << "Error creating SDL window: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        return -1;
-    }
-
-    // Create an OpenGL context
-    SDL_GLContext context = SDL_GL_CreateContext(window);
-    if (!context) {
-        std::cerr << "Error creating OpenGL context: " << SDL_GetError() << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-
-    // Load OpenGL function pointers with GLAD
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        std::cerr << "Failed to initialize GLAD" << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-
-    // Set up OpenGL viewport
-    glViewport(0, 0, WIDTH, HEIGHT);
-
-    // Set up perspective projection
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-
-    // Initialize particles
-    Particle particles[NUM_PARTICLES];
-    for (int i = 0; i < NUM_PARTICLES; ++i) {
-        particles[i].position = glm::vec2((rand() % WIDTH) / (float)WIDTH * 2 - 1, (rand() % HEIGHT) / (float)HEIGHT * 2 - 1);
-        particles[i].velocity = glm::vec2((rand() % 200 - 100) / 1000.0f, (rand() % 200 - 100) / 1000.0f);
-        particles[i].color = glm::vec3((rand() % 255) / 255.0f, (rand() % 255) / 255.0f, (rand() % 255) / 255.0f);
-    }
-
-    // Game loop
-    bool running = true;
-    while (running) {
-        // Handle events
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-switch (event.type) {
-    case SDL_QUIT:
-        running = false;
-        break;
-    case SDL_KEYDOWN:
-        if (event.key.keysym.sym == SDLK_SPACE) {
-            // Start or stop simulation
-            simulation_running = !simulation_running;
-        } else if (event.key.keysym.sym == SDLK_UP) {
-            // Change particle color based on up arrow key
-            for (int i = 0; i < NUM_PARTICLES; ++i) {
-                particles[i].color.r += 0.1f;
-                particles[i].color.r = glm::clamp(particles[i].color.r, 0.0f, 1.0f);
-            }
-        } else if (event.key.keysym.sym == SDLK_DOWN) {
-            // Change particle color based on down arrow key
-            for (int i = 0; i < NUM_PARTICLES; ++i) {
-                particles[i].color.r -= 0.1f;
-                particles[i].color.r = glm::clamp(particles[i].color.r, 0.0f, 1.0f);
-            }
-        } else if (event.key.keysym.sym == SDLK_LEFT) {
-            // Change particle color based on left arrow key
-            for (int i = 0; i < NUM_PARTICLES; ++i) {
-                particles[i].color.g -= 0.1f;
-                particles[i].color.g = glm::clamp(particles[i].color.g, 0.0f, 1.0f);
-            }
-        } else if (event.key.keysym.sym == SDLK_RIGHT) {
-            // Change particle color based on right arrow key
-            for (int i = 0; i < NUM_PARTICLES; ++i) {
-                particles[i].color.g += 0.1f;
-                particles[i].color.g = glm::clamp(particles[i].color.g, 0.0f, 1.0f);
-            }
-        }
-        break;
-}
-
-        }
-
-        // Clear the screen
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Render particles
-        glBegin(GL_TRIANGLES);
-        for (int i = 0; i < NUM_PARTICLES; ++i) {
-            // Update particle position
-            particles[i].position += particles[i].velocity;
-
-            // Set particle color
-            glColor3f(particles[i].color.r, particles[i].color.g, particles[i].color.b);
-
-            // Draw triangle representing the particle
-            glVertex2f(particles[i].position.x, particles[i].position.y);
-            glVertex2f(particles[i].position.x + 0.02f, particles[i].position.y);
-            glVertex2f(particles[i].position.x, particles[i].position.y + 0.02f);
-        }
-        glEnd();
-
-        // Swap buffers
-        SDL_GL_SwapWindow(window);
-    }
-
-    // Clean up
-    SDL_GL_DeleteContext(context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    
-    return 0;
-}
-
-*/
