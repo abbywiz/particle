@@ -312,9 +312,15 @@ void VertexSpecification(){
     for (int i = 0; i < NUM_PARTICLES; ++i)
     {
 
-        glm::vec3 position = glm::vec3((rand() % gScreenWidth) / (float)gScreenWidth * 2 - 1, 
-                                       (rand() % gScreenHeight) / (float)gScreenHeight * 2 - 1, 
-                                       -0.9);
+
+        // Calculate a random angle
+        float angle = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * glm::pi<float>();
+
+        // Calculate position around the central dot
+        glm::vec3 position = centralDotPosition + glm::vec3(cos(angle) * (rand() % 100) / 100.0f,
+                                                            sin(angle) * (rand() % 100) / 100.0f,
+                                                            0.0f);
+
         glm::vec3 color = glm::vec3((rand() % 255) / 255.0f, 
                                      (rand() % 255) / 255.0f, 
                                      (rand() % 255) / 255.0f);
@@ -325,7 +331,7 @@ void VertexSpecification(){
         p.lifespan = 1.0f;
         p.velocity = glm::vec3((rand() % 200 - 100) / 100.0f, (rand() % 200 - 100) / 100.0f, 0.0f);
         p.color = color;
-        p.acceleration = glm::vec3(0.0f, -0.5f, 0.0f);
+        p.acceleration = glm::vec3(0.0f, -0.005f, 0.0f);
         p.shape = shape;
 
         particles.push_back(p);
@@ -608,8 +614,12 @@ vertexData[2] = -0.9f;                // Update central dot z position
 for (int i = 1; i <= particles.size(); i++) {
     Particle &p = particles[i];
 
-    // Update velocity
-    p.velocity += p.acceleration * deltaTime;
+    // Calculate direction towards the cursor
+    glm::vec3 direction = centralDotPosition - p.position;
+    direction = glm::normalize(direction);
+
+    // Update velocity based on direction and acceleration
+    p.velocity += direction * (velocity * 2.0f * deltaTime); // Increased influence with * 2.0f
 
     // Update position
     p.position += p.velocity * deltaTime;
@@ -633,6 +643,7 @@ for (int i = 1; i <= particles.size(); i++) {
 // Upload updated vertex data to GPU
 //IDK if this should really be done here
 glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(GLfloat), vertexData.data(), GL_DYNAMIC_DRAW);
+
 }
 
 
