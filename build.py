@@ -17,7 +17,7 @@ LIBRARIES=""            # What libraries do we want to include
 
 if platform.system()=="Linux":
     ARGUMENTS="-D LINUX" # -D is a #define sent to preprocessor
-    INCLUDE_DIR="-I ./include/ -I ./../../common/thirdparty/glm/"
+    INCLUDE_DIR="-I ./include/ -I ./thirdparty/glm/"
     LIBRARIES="-lSDL2 -ldl"
 elif platform.system()=="Darwin":
     ARGUMENTS="-D MAC" # -D is a #define sent to the preprocessor.
@@ -25,7 +25,7 @@ elif platform.system()=="Darwin":
     LIBRARIES="-F/Library/Frameworks -framework SDL2 -rpath /Library/Frameworks"
 elif platform.system()=="Windows":
     ARGUMENTS="-D MINGW -static-libgcc -static-libstdc++" 
-    INCLUDE_DIR="-I./include/ -I./../../common/thirdparty/old/glm/"
+    INCLUDE_DIR="-I./include/ -I./thirdparty/old/glm/"
     EXECUTABLE="prog.exe"
     LIBRARIES="-lmingw32 -lSDL2main -lSDL2 -mwindows"
 # (2)=================== Platform specific configuration ===================== #
